@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+
+	<Properties>
+		<Property name="LOG_PATTERN">[%d{HH:mm:ss.SSS}] [%t] [%-5level] | %msg%n</Property>
+	</Properties>
+
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="${LOG_PATTERN}" />
+		</Console>
+
+		<RollingFile name="DEFAULT_LOG" fileName="logs/tests.log" append="false" filePattern="tests-%d{yyyy-MM-dd-HH}-%i.log.gz">
+			<PatternLayout pattern="${LOG_PATTERN}" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="50 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="1" />
+		</RollingFile>
+		<Async name="FILE">
+			<AppenderRef ref="DEFAULT_LOG" />
+		</Async>
+	</Appenders>
+
+	<Loggers>
+		<Logger name="console" level="info">
+			<AppenderRef ref="Console" />
+		</Logger>
+
+		<Logger name="file" level="info">
+			<AppenderRef ref="FILE" />
+		</Logger>
+
+		<Root level="OFF">
+		</Root>
+	</Loggers>
+</Configuration>

@@ -2,16 +2,14 @@ package com.endava.petclinic;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalToIgnoringCase;
-import static org.hamcrest.Matchers.hasLength;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.startsWith;
 
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 
+import com.endava.petclinic.logging.RALogger;
 import com.endava.petclinic.models.Owner;
+import com.endava.petclinic.models.User;
 import com.endava.petclinic.util.EnvReader;
 import com.github.javafaker.Faker;
 
@@ -25,6 +23,19 @@ public class PetClinicTest {
 	@Test
 	public void firstTest() {
 
+		// create new User
+		User user = new User( faker.internet().password(), faker.name().username(), "OWNER_ADMIN" );
+		given().filters( new RALogger.LogFilter() )
+				.baseUri( EnvReader.getBaseUri() )
+				.port( EnvReader.getPort() )
+				.basePath( EnvReader.getBasePath() )
+				.auth().preemptive().basic( "admin", "admin" )
+				.contentType( ContentType.JSON )
+				.body( user )
+				.post( "/api/users" )
+				.then().statusCode( HttpStatus.SC_CREATED );
+
+		// create new Owner
 		Owner owner = new Owner();
 		owner.setAddress( faker.address().streetAddress() );
 		owner.setCity( faker.address().city() );
@@ -32,40 +43,32 @@ public class PetClinicTest {
 		owner.setLastName( faker.name().lastName() );
 		owner.setTelephone( faker.number().digits( 10 ) );
 
-		ValidatableResponse response = given()
+		ValidatableResponse response = given().filters( new RALogger.LogFilter() )
 				.baseUri( EnvReader.getBaseUri() )
 				.port( EnvReader.getPort() )
 				.basePath( EnvReader.getBasePath() )
+				.auth().preemptive().basic( user.getUsername(), user.getPassword() )
 				.contentType( ContentType.JSON )
 				.body( owner )
-				.log().all()
 				.post( "/api/owners" )
-				.prettyPeek()
 				.then().statusCode( HttpStatus.SC_CREATED );
 
 		Integer id = response.extract().jsonPath().getInt( "id" );
 
-		ValidatableResponse getResponse = given()
+		// get owner by id
+		ValidatableResponse getResponse = given().filters( new RALogger.LogFilter() )
 				//request
 				.baseUri( EnvReader.getBaseUri() )
 				.port( EnvReader.getPort() )
 				.basePath( EnvReader.getBasePath() )
+				.auth().preemptive().basic( user.getUsername(), user.getPassword() )
 				.pathParam( "ownerId", id )
-				.log().all()
 				.get( "/api/owners/{ownerId}" )
 				//response
-				.prettyPeek()
-				.then().statusCode( HttpStatus.SC_OK )
-				.body( "id", is( id ) )
-				.body( "firstName", is( owner.getFirstName() ) )
-				.body( "lastName", is( owner.getLastName() ) )
-				.body( "address", is( owner.getAddress() ) )
-				.body( "city", is( owner.getCity() ) )
-				.body( "telephone", is( owner.getTelephone() ) );
+				.then().statusCode( HttpStatus.SC_OK );
 
 		Owner actualOwner = getResponse.extract().as( Owner.class );
 
 		assertThat( actualOwner, is( owner ) );
-
 	}
 }
